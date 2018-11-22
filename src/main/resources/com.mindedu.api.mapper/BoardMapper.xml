@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mindedu.api.mapper.BoardMapper">
+
+   <insert id="insertBoard">
+       INSERT INTO BOARD_INFO (file_name, title, contents, create_user_name, refer_url)
+       VALUES (#{fileName}, #{title}, #{contents}, #{userName}, #{referUrl})
+   </insert>
+
+    <update id="updateBoard">
+        UPDATE BOARD_INFO
+        <set>
+            <if test="title != ''">title = #{title},</if>
+            <if test="contents != ''">contents = #{contents},</if>
+            <if test="fileName != ''">file_name = #{fileName},</if>
+            <if test="userName != ''">create_user_name = #{userName},</if>
+            <if test="referUrl != ''">refer_url = #{referUrl},</if>
+        </set>
+        WHERE idx = #{boardId}
+    </update>
+
+    <select id="getBoardList" resultType="com.mindedu.api.vo.BoardInfoVO">
+        SELECT * FROM BOARD_INFO
+        WHERE delete_yn = false
+        ORDER BY create_date DESC
+    </select>
+
+    <select id="selectBoardInfo" resultType="com.mindedu.api.vo.BoardInfoVO">
+      SELECT * FROM BOARD_INFO
+      WHERE delete_yn = false
+      AND idx = #{fileId}
+    </select>
+
+    <update id="updateFile">
+        UPDATE BOARD_INFO
+        SET delete_yn = #{deleteYn}
+        WHERE idx = #{fileId}
+    </update>
+
+</mapper>

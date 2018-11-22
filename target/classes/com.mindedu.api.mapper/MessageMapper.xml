@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mindedu.api.mapper.MessageMapper">
+
+    <insert id="insertSmsSendList">
+      INSERT INTO SMSQ_SEND
+      ( dest_no, call_back, msg_contents, sendreq_time, msg_type )
+      VALUES
+      <foreach collection="smsList" item="values" index="index" separator=",">
+      ( #{values.receiveNumber}, #{values.sendNumber}, #{values.message}, #{values.reserveTime}, #{values.msgType} )
+      </foreach>
+    </insert>
+
+    <select id="selectSmsSendList" resultType="com.mindedu.api.dto.SmsSendListDto">
+        SELECT *
+        FROM SMSQ_SEND_${yyyyMM}
+        ORDER BY seqno DESC
+        <if test="start >= 0">
+            OFFSET #{start} ROWS
+            FETCH NEXT #{limit} ROWS ONLY
+        </if>
+    </select>
+
+</mapper>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ Copyright(c) 2015 BirdLetter. All rights reserved.
+  ~ This software is the proprietary information of BirdLetter.
+  -->
+
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <comment>properties</comment>
+    <entry key="mindedu.api.db.url">jdbc:jtds:sqlserver://211.62.104.171:7845;databaseName=CO_MSG</entry>
+    <entry key="mindedu.api.db.username">SA</entry>
+    <entry key="mindedu.api.db.password">Akdlsem12!@</entry>
+    <entry key="logger.root">/Users/jihoan/Downloads/logs</entry>
+    <entry key="logger.level">DEBUG</entry>
+    <entry key="logger.name">STDOUT</entry>
+    <entry key="mysql.mindedu.api.db.url">jdbc:mysql://211.62.104.179:3306/MINDEDU</entry>
+    <entry key="mysql.mindedu.api.db.username">root</entry>
+    <entry key="mysql.mindedu.api.db.password">akdlsemdpeb12#$</entry>
+    <entry key="board.file.upload.path">/Users/jihoan/Documents/board_file</entry>
+</properties>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mindedu.api.mapper.AuthMapper">
+
+   <select id="selectAuthKey" resultType="Integer">
+       SELECT count(idx)
+       FROM API_AUTH_COMPANY
+       WHERE auth_key = #{authKey}
+   </select>
+
+</mapper>

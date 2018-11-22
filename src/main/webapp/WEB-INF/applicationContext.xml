@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans-2.0.dtd"> -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.1.xsd
+    ">
+    <util:properties id="config" location="classpath:properties.xml" />
+    
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <tx:annotation-driven proxy-target-class="true"/>
+
+    <context:component-scan base-package="com.mindedu">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+        <context:exclude-filter type="annotation" expression="org.aspectj.lang.annotation.Aspect" />
+        <context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice" />
+        <context:exclude-filter type="annotation" expression="org.springframework.context.annotation.Configuration" />
+    </context:component-scan>
+
+    <!-- MySql -->
+    <bean id="mysqlParentDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close" abstract="true"
+        p:driverClassName="com.mysql.jdbc.Driver"
+        p:initialSize="10"
+        p:maxActive="30"
+        p:maxWait="6000"
+        p:poolPreparedStatements="true"
+        p:defaultAutoCommit="true"
+        p:maxIdle="10"
+        p:validationQuery="select 1"
+        p:testWhileIdle="true"
+        p:timeBetweenEvictionRunsMillis="7200000"
+    />
+
+    <!-- Mssql -->
+    <bean id="parentDataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName">
+            <value>net.sourceforge.jtds.jdbc.Driver</value>
+        </property>
+    </bean>
+
+	<!-- DEFAULT DB  -->
+    <bean id="mindEduDataSource" parent="parentDataSource"
+                p:username="#{config['mindedu.api.db.username']}"
+                p:password="#{config['mindedu.api.db.password']}"
+                p:url="#{config['mindedu.api.db.url']}"/>
+
+    <bean id="mysqlMindeduDataSource" parent="mysqlParentDataSource"
+                p:username="#{config['mysql.mindedu.api.db.username']}"
+                p:password="#{config['mysql.mindedu.api.db.password']}"
+                p:url="#{config['mysql.mindedu.api.db.url']}"/>
+
+	<bean id="routingDataSource" class="com.mindedu.api.define.datasource.RoutingDataSource">
+		<property name="targetDataSources">
+			<map key-type="com.mindedu.api.define.datasource.DataSourceType">
+                <entry key="MIND_EDU" value-ref="mindEduDataSource"/>
+                <entry key="MINDEDU_MYSQL" value-ref="mysqlMindeduDataSource"/>
+			</map>
+		</property>
+		<property name="defaultTargetDataSource" ref="mindEduDataSource"/>
+	</bean>
+	
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="routingDataSource" />
+    </bean>
+    <!--
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="insert*" propagation="REQUIRED"/>
+            <tx:method name="select*" read-only="true" />
+        </tx:attributes>
+    </tx:advice>
+    -->
+    <!-- ========================= AOP DEFINITIONS ======================== -->
+    <bean id="datasourceAspect" class="com.mindedu.api.aop.ExecutionDataSourceAspect"/>
+    <aop:aspectj-autoproxy>
+    	<aop:include name="datasourceAspect"/>
+    </aop:aspectj-autoproxy>
+
+    <bean id="sqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="routingDataSource"/>
+        <property name="typeAliasesPackage" value="com.mindedu.api.dto"/>
+        <property name="configLocation" value="classpath:config/mybatis-config.xml"/>
+        <property name="mapperLocations" value="classpath:com.mindedu.api.mapper/*.xml" />
+	</bean>
+	 
+    <bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate" destroy-method="clearCache">
+        <constructor-arg name="sqlSessionFactory" ref="sqlSessionFactoryBean" />
+    </bean>
+    <!-- 
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate" destroy-method="clearCache">
+		<constructor-arg index="0" ref="sqlSessionFactoryBean" />  	
+		<constructor-arg index="1" value="BATCH" />
+	</bean>
+     -->
+    <bean id="mapperScannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.mindedu.api.mapper"/>
+    </bean>
+    
+	<bean class="org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor"/>
+
+    <bean class="org.springframework.web.multipart.commons.CommonsMultipartResolver" id="spring.RegularCommonsMultipartResolver">
+        <property name="maxUploadSize" value="5242880000" />
+    </bean>
+
+  	<!-- ========================= CONFIG OBJECT DEFINITIONS CONFIG ======================== -->
+    <bean id="ConfigHolder" class="com.mindedu.api.config.ConfigHolder"/>
+
+    <bean id="userTokenFilter" class="com.mindedu.api.filter.UserTokenFilter"/>
+
+	<!-- ========================= BUSINESS OBJECT DEFINITIONS CONFIG ======================== -->
+	<!--<bean id="messageServiceImpl" class="com.flowedu.service.impl.MessageServiceImpl"/>-->
+  	<!---->
+  	<!--&lt;!&ndash; ========================= CRONQUARTZ DEFINITIONS ======================== &ndash;&gt;-->
+	<!--&lt;!&ndash; 회원가입 이메일 발송 스케쥴링 &ndash;&gt;-->
+  	<!--<bean id="emailSendQuartz" class="org.springframework.scheduling.quartz.JobDetailBean">-->
+  		<!--<property name="jobClass" value="com.flowedu.quartz.EmailSendQuartz" />-->
+  		<!--<property name="applicationContextJobDataKey" value="applicationContext"/>-->
+  	<!--</bean>-->
+  	<!--<bean id="cronTrigger1" class="org.springframework.scheduling.quartz.CronTriggerBean">-->
+		<!--<property name="jobDetail" ref="emailSendQuartz"/>-->
+		<!--<property name="cronExpression" value="0 0/1 * * * ?"/>-->
+	<!--</bean>-->
+	<!--&lt;!&ndash; 이메일 발송리스트 삭제  &ndash;&gt;-->
+	<!--<bean id="emailDeleteQuartz" class="org.springframework.scheduling.quartz.JobDetailBean">-->
+		<!--<property name="jobClass" value="com.flowedu.quartz.EmailDeleteQuartz" />-->
+		<!--<property name="applicationContextJobDataKey" value="applicationContext" />-->
+	<!--</bean>-->
+	<!--<bean id="cronTrigger2" class="org.springframework.scheduling.quartz.CronTriggerBean">-->
+		<!--<property name="jobDetail" ref="emailDeleteQuartz" />-->
+		<!--<property name="cronExpression" value="0 0 2 * * ?" />-->
+	<!--</bean>-->
+
+  	<!--<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">-->
+		<!--<property name="triggers">-->
+			<!--<list>-->
+				<!--<ref bean="cronTrigger1"/>-->
+				<!--<ref bean="cronTrigger2"/>-->
+			<!--</list>-->
+		<!--</property>-->
+		<!--<property name="quartzProperties">-->
+			<!--<props>-->
+				<!--<prop key="org.quartz.threadPool.class">org.quartz.simpl.SimpleThreadPool</prop>-->
+	            <!--<prop key="org.quartz.threadPool.threadCount">3</prop>-->
+	            <!--<prop key="org.quartz.threadPool.threadPriority">4</prop>-->
+	            <!--<prop key="org.quartz.jobStore.class">org.quartz.simpl.RAMJobStore</prop>-->
+	            <!--<prop key="org.quartz.jobStore.misfireThreshold">60000</prop>-->
+				<!--<prop key="org.quartz.scheduler.skipUpdateCheck">true</prop>-->
+			<!--</props>-->
+		<!--</property>-->
+	<!--</bean>-->
+
+	<!--&lt;!&ndash; SPRING JAVA MAIL &ndash;&gt;-->
+	<!--<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">-->
+		<!--<property name="host" value="smtp.gmail.com" />-->
+		<!--<property name="port" value="587" />-->
+		<!--<property name="defaultEncoding" value="UTF-8" />-->
+		<!--<property name="username" value="#{config['google.email.username']}" />-->
+		<!--<property name="password" value="#{config['google.email.password']}" />-->
+		<!--<property name="javaMailProperties">-->
+			<!--<props>-->
+				<!--<prop key="mail.smtp.auth">true</prop>-->
+				<!--<prop key="mail.smtp.starttls.required">true</prop>-->
+				<!--<prop key="mail.smtp.starttls.enable">true</prop>-->
+				<!--<prop key="mail.smtp.socketFactory.class">javax.net.ssl.SSLSocketFactory</prop>-->
+				<!--<prop key="mail.smtp.socketFactory.fallback">false</prop>-->
+				<!--<prop key="mail.smtp.port">465</prop>-->
+				<!--<prop key="mail.smtp.socketFactory.port">465</prop>-->
+			<!--</props>-->
+		<!--</property>-->
+	<!--</bean>-->
+
+</beans>
